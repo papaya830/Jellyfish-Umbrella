@@ -1,19 +1,20 @@
 import React from "react";
 
 const PRESET_COLORS = [
-  { r: 214, g: 64, b: 200, name: "Magenta" },
-  { r: 50, g: 205, b: 100, name: "Green" },
-  { r: 100, g: 240, b: 210, name: "Mint" },
-  { r: 210, g: 220, b: 50, name: "Lime" },
-  { r: 230, g: 170, b: 50, name: "Gold" },
-  { r: 160, g: 60, b: 210, name: "Purple" },
-  { r: 60, g: 130, b: 240, name: "Blue" },
-  { r: 230, g: 60, b: 70, name: "Red" },
-  { r: 70, g: 50, b: 180, name: "Indigo" },
+  { r: 255, g: 0,   b: 234, name: "Magenta" },
+  { r: 0,   g: 255, b: 47,  name: "Green" },
+  { r: 0,   g: 255, b: 191, name: "Mint" },
+  { r: 221, g: 255, b: 0,   name: "Lime" },
+  { r: 255, g: 200, b: 0,   name: "Gold" },
+  { r: 208, g: 0,   b: 255, name: "Purple" },
+  { r: 0,   g: 190, b: 255, name: "Blue" },
+  { r: 255, g: 0,   b: 4,   name: "Red" },
+  { r: 91,  g: 0,   b: 255, name: "Indigo" },
 ];
 
 const rgb = (c) => `rgb(${c.r}, ${c.g}, ${c.b})`;
 const colorsMatch = (a, b) => a && b && a.r === b.r && a.g === b.g && a.b === b.b;
+const toHex = (c) => '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('');
 
 export default function ColorPicker({ activeColor, onSelect }) {
   return (
