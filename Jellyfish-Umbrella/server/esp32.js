@@ -15,10 +15,12 @@ async function sendToESP32(endpoint, data) {
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Connection": "close"
+      },
       body: JSON.stringify(data),
     });
-
     if (!response.ok) {
       throw new Error(`ESP32 responded with ${response.status}`);
     }
