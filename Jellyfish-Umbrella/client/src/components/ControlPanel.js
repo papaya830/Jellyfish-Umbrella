@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import ColorPicker from "./ColorPicker";
 import AIColorPicker from "./AIColorPicker";
-import TentacleControls from "./TentacleControls";
-import { setColor, setMovement } from "../api";
+import LightingEffects from "./LightingEffects";
+import { setColor } from "../api";
 
 const rgb = (c) => `rgb(${c.r}, ${c.g}, ${c.b})`;
 
@@ -12,10 +12,9 @@ export default function ControlPanel({
   tentacleState,
   setTentacleState,
 }) {
-  const [colorMode, setColorMode] = useState("presets"); // "presets" | "ai"
-  const resetTimerRef = useRef(null);
+  const [colorMode, setColorMode] = useState("presets");
+  const [activeEffect, setActiveEffect] = useState("static");
 
-  // ── Handle color selection (preset or AI) ──
   const handleColorSelect = async (color) => {
     setActiveColor(color);
     try {
@@ -25,28 +24,9 @@ export default function ControlPanel({
     }
   };
 
-  // ── Handle tentacle direction ──
-  const handleTentacle = async (direction) => {
-    // Clear existing reset timer
-    if (resetTimerRef.current) {
-      clearTimeout(resetTimerRef.current);
-    }
-
-    setTentacleState(direction);
-
-    if (direction !== "resting") {
-      try {
-        await setMovement(direction);
-      } catch (err) {
-        console.error("Failed to send movement:", err);
-      }
-
-      // Client-side timer synced with server's 6s reset
-      resetTimerRef.current = setTimeout(() => {
-        setTentacleState("resting");
-        resetTimerRef.current = null;
-      }, 6000);
-    }
+  const handleEffectSelect = async (effectId) => {
+    setActiveEffect(effectId);
+    console.log(`[Effect] Selected: ${effectId}`);
   };
 
   return (
@@ -58,7 +38,6 @@ export default function ControlPanel({
         animation: "fadeIn 0.4s ease-out",
       }}
     >
-      {/* Active color indicator */}
       {activeColor && (
         <div
           style={{
@@ -94,7 +73,6 @@ export default function ControlPanel({
         </div>
       )}
 
-      {/* Section labels */}
       <div
         style={{
           display: "flex",
@@ -107,13 +85,11 @@ export default function ControlPanel({
           colours
         </span>
         <span style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.85)", letterSpacing: 0.8 }}>
-          tentacles
+          effects
         </span>
       </div>
 
-      {/* Main content: colors + tentacles side by side */}
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-        {/* Colors */}
         <div style={{ flex: 1 }}>
           {colorMode === "presets" ? (
             <ColorPicker activeColor={activeColor} onSelect={handleColorSelect} />
@@ -121,7 +97,6 @@ export default function ControlPanel({
             <AIColorPicker activeColor={activeColor} onSelect={handleColorSelect} />
           )}
 
-          {/* Toggle link */}
           <button
             onClick={() => setColorMode(colorMode === "presets" ? "ai" : "presets")}
             style={{
@@ -145,16 +120,14 @@ export default function ControlPanel({
           </button>
         </div>
 
-        {/* Tentacles */}
         <div style={{ flex: 1 }}>
-          <TentacleControls
-            state={tentacleState}
-            onDirectionChange={handleTentacle}
+          <LightingEffects
+            activeEffect={activeEffect}
+            onSelect={handleEffectSelect}
           />
         </div>
       </div>
 
-      {/* Status footer */}
       <div
         style={{
           marginTop: 36,
@@ -171,7 +144,7 @@ export default function ControlPanel({
           ESP32 {activeColor ? "● connected" : "○ waiting"}
         </div>
         <div style={{ fontSize: 10, color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
-          tentacles: {tentacleState}
+          effect: {activeEffect}
         </div>
       </div>
     </div>
