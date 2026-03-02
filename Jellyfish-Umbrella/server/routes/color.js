@@ -1,46 +1,34 @@
-const express = require("express");
-const router = express.Router();
-const { setLEDColor } = require("../esp32");
+// server/routes/color.js
+const express = require('express');
+const router  = express.Router();
+const { sendToESP32 } = require('../esp32');
 
-/**
- * POST /api/color
- * Body: { r: 0-255, g: 0-255, b: 0-255 }
- * Sets all LED tentacles to the specified color.
- */
-router.post("/color", async (req, res) => {
-  const { r, g, b } = req.body;
+router.post('/', async (req, res) => {
+  try {
+    const { hex, brightness, pattern } = req.body;
 
-  // Validate RGB values
-  if (!isValidRGB(r) || !isValidRGB(g) || !isValidRGB(b)) {
-    return res.status(400).json({
-      error: "Invalid RGB values. Each must be an integer between 0 and 255.",
-    });
-  }
+    // Validate hex (6 uppercase hex chars)
+    if (!hex || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
+      return res.status(400).json({ error: 'hex must be a 6-character hex string, e.g. "FF8800"' });
+    }
+    // Parse hex → r, g, b for the ESP32 /led endpoint
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
 
-  const color = {
-    r: Math.round(r),
-    g: Math.round(g),
-    b: Math.round(b),
-  };
+    const bri = Math.max(0, Math.min(255, parseInt(brightness) || 192));
 
-  // Update shared state
-  req.app.locals.state.color = color;
+    const validPatterns = ['solid', 'twinkle', 'rainbow', 'pulse', 'wave'];
+    const pat = validPatterns.includes(pattern) ? pattern : 'solid';
 
-  // Forward to ESP32
-  const result = await setLEDColor(color);
+    // Forward to ESP32
+    await sendToESP32('/led', { r, g, b, brightness: bri, pattern: pat });
 
-  if (result.success) {
-    console.log(`[Color] Set to rgb(${color.r}, ${color.g}, ${color.b})`);
-    res.json({ success: true, color });
-  } else {
-    // Still update state even if ESP32 is unreachable (for development)
-    console.warn(`[Color] ESP32 unreachable, state updated locally`);
-    res.json({ success: true, color, esp32: false });
+    res.json({ ok: true, hex, r, g, b, brightness: bri, pattern: pat });
+  } catch (err) {
+    console.error('Color route error:', err.message);
+    res.status(502).json({ error: 'Could not reach ESP32', detail: err.message });
   }
 });
-
-function isValidRGB(value) {
-  return typeof value === "number" && value >= 0 && value <= 255;
-}
 
 module.exports = router;

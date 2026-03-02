@@ -1,59 +1,60 @@
-/**
- * API client for the Jellyfish Umbrella Express backend.
- * 
- * In development, requests are proxied to localhost:3001 via the
- * "proxy" field in client/package.json.
- * 
- * In production, update BASE_URL to your deployed server address.
- */
-
-const BASE_URL = ""; // empty = use proxy in dev, or set full URL for prod
+// client/src/api.js
+const BASE = ''; // proxied via CRA proxy in package.json
 
 /**
- * Set LED color on all tentacles
- * @param {{ r: number, g: number, b: number }} color
+ * Set LED colour, brightness, and pattern.
+ * @param {{ hex: string, brightness: number, pattern: string }} params
  */
-export async function setColor(color) {
-  const res = await fetch(`${BASE_URL}/api/color`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(color),
+export async function setColor({ hex, brightness, pattern }) {
+  const res = await fetch(`${BASE}/api/color`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hex, brightness, pattern }),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
 /**
- * Set tentacle movement direction
- * @param {"left" | "right"} direction
+ * Trigger tentacle movement.
+ * @param {{ direction: 'left' | 'right' }} params
  */
-export async function setMovement(direction) {
-  const res = await fetch(`${BASE_URL}/api/movement`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+export async function setMovement({ direction }) {
+  const res = await fetch(`${BASE}/api/movement`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ direction }),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 /**
- * Generate 3 AI colors from a vibe/tone prompt via Gemini
- * @param {string} prompt
- * @returns {Promise<{ colors: Array<{r: number, g: number, b: number}>, fallback?: boolean }>}
- */
-export async function generateAIColors(prompt) {
-  const res = await fetch(`${BASE_URL}/api/ai-color`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
-  });
-  return res.json();
-}
-
-/**
- * Get current system state
- * @returns {Promise<{ color: {r,g,b}, position: string }>}
+ * Get current ESP32 status.
  */
 export async function getStatus() {
-  const res = await fetch(`${BASE_URL}/api/status`);
+  const res = await fetch(`${BASE}/api/status`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+/**
+ * Generate AI colour suggestions from a text prompt.
+ * Accepts a raw prompt string. Returns { colors: [{r,g,b}, ...] }.
+ * @param {string} prompt
+ */
+export async function getAIColors(prompt) {
+  const res = await fetch(`${BASE}/api/ai-color`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Alias — AIColorPicker.js and ColorPicker.js both import this name
+export const generateAIColors = getAIColors;
