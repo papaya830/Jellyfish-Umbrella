@@ -713,7 +713,7 @@ export default function ColorPicker({ onColorSent } = {}) {
         </div>
 
         {/* ── brightness ── */}
-        <div className="cp-card" style={{ marginBottom: '8px' }}>
+        <div className="cp-card">
           <div className="cp-card-title">Step 2 — Adjust brightness</div>
           <div className="cp-slider-header">
             <div className="cp-slider-info" />
