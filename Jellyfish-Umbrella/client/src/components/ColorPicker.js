@@ -175,6 +175,7 @@ export default function ColorPicker({ onColorSent } = {}) {
     const cx = W / 2, cy = H / 2;
     const outerR = W / 2 - 6;
     const innerR = outerR * 0.34;
+    const edgeAA = 1.5; // small band for softer edge
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -184,12 +185,22 @@ export default function ColorPicker({ onColorSent } = {}) {
       for (let px = 0; px < W; px++) {
         const x = px - cx, y = py - cy;
         const dist = Math.sqrt(x * x + y * y);
-        if (dist > outerR || dist < innerR) continue;
+        if (dist > outerR + edgeAA || dist < innerR - edgeAA) continue;
+
+        let alpha = 1;
+        if (dist > outerR - edgeAA) {
+          alpha = Math.max(0, (outerR + edgeAA - dist) / (2 * edgeAA));
+        }
+        if (dist < innerR + edgeAA) {
+          alpha = Math.min(alpha, Math.max(0, (dist - (innerR - edgeAA)) / (2 * edgeAA)));
+        }
+        if (alpha <= 0) continue;
+
         const h   = ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
         const s   = Math.min(100, (dist / outerR) * 100);
         const { r, g, b } = hslToRgb(h, s, l);
         const idx = (py * W + px) * 4;
-        data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
+        data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = Math.round(255 * alpha);
       }
     }
     ctx.putImageData(imageData, 0, 0);
@@ -621,13 +632,6 @@ export default function ColorPicker({ onColorSent } = {}) {
     <div className="cp-root">
       {/* header */}
       <div className="cp-header">
-        <div className="cp-header-left">
-          <div className="cp-logo">🪼</div>
-          <div>
-            <div className="cp-site-title">Jellyfish Umbrella</div>
-            <div className="cp-site-sub">LED Strip Controller</div>
-          </div>
-        </div>
         <div className="cp-conn-badge">
           <div className={`cp-conn-dot${connected ? '' : ' offline'}`} />
           <span>{connected ? 'Connected · ESP32' : 'Offline'}</span>
@@ -639,10 +643,6 @@ export default function ColorPicker({ onColorSent } = {}) {
         {/* ── colour wheel ── */}
         <div className="cp-card cp-wheel-card">
           <div className="cp-card-title">Step 1 — Pick a colour</div>
-          <div className="cp-card-desc">
-            Drag anywhere on the disc — the <strong>angle</strong> sets the hue,
-            the <strong>distance from centre</strong> sets how vivid or pastel the colour is.
-          </div>
           <div className="cp-wheel-wrap">
             <canvas
               ref={canvasRef}
@@ -655,28 +655,22 @@ export default function ColorPicker({ onColorSent } = {}) {
               <span ref={hexLabelRef} className="cp-wheel-hex">#{hex6}</span>
             </div>
           </div>
-          <div className="cp-wheel-hint">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" opacity=".45">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/>
-            </svg>
-            Centre = white · Edge = vivid · Angle = hue
-          </div>
           <div className="cp-readout">
-            <div className="cp-chip">
+            <div className="cp-chip cp-chip--r">
               <div className="cp-chip-label">Red</div>
-              <div ref={chipRRef} className="cp-chip-val" style={{ color: '#ff6b6b' }}>{toHex2(r)}</div>
+              <div ref={chipRRef} className="cp-chip-val">{toHex2(r)}</div>
             </div>
-            <div className="cp-chip">
+            <div className="cp-chip cp-chip--g">
               <div className="cp-chip-label">Green</div>
-              <div ref={chipGRef} className="cp-chip-val" style={{ color: '#69db7c' }}>{toHex2(g)}</div>
+              <div ref={chipGRef} className="cp-chip-val">{toHex2(g)}</div>
             </div>
-            <div className="cp-chip">
+            <div className="cp-chip cp-chip--b">
               <div className="cp-chip-label">Blue</div>
-              <div ref={chipBRef} className="cp-chip-val" style={{ color: '#74c0fc' }}>{toHex2(b)}</div>
+              <div ref={chipBRef} className="cp-chip-val">{toHex2(b)}</div>
             </div>
             <div className="cp-chip cp-chip-hex">
               <div className="cp-chip-label">Hex sent</div>
-              <div ref={chipHexRef} className="cp-chip-val" style={{ color: 'var(--cp-accent)' }}>{hex6}</div>
+              <div ref={chipHexRef} className="cp-chip-val">{hex6}</div>
             </div>
           </div>
 
@@ -713,7 +707,7 @@ export default function ColorPicker({ onColorSent } = {}) {
               <div className="cp-ai-error">Couldn't get a colour — try rephrasing</div>
             )}
             <div className="cp-ai-footnote">
-              ✦ <strong>AI-generated</strong> — not sure what to pick? Describe a mood, memory, or feeling and we'll translate it into a colour for you.
+              <strong className="cp-ai-footnote-accent">✦ AI-generated</strong> — not sure what to pick? Describe a mood, memory, or feeling and we'll translate it into a colour for you.
             </div>
           </div>
         </div>
@@ -721,16 +715,12 @@ export default function ColorPicker({ onColorSent } = {}) {
         {/* ── brightness ── */}
         <div className="cp-card">
           <div className="cp-card-title">Step 2 — Adjust brightness</div>
-          <div className="cp-card-desc">How intensely the LED strips glow. 0 = off, 255 = full power.</div>
           <div className="cp-slider-header">
-            <div className="cp-slider-info">
-              <div className="cp-slider-name">☀ Brightness</div>
-              <div className="cp-slider-desc">Sent to the ESP32 alongside the hex colour value.</div>
-            </div>
-            <div>
-              <div className="cp-slider-num">{bri}</div>
-              <div className="cp-slider-unit">/ 255</div>
-            </div>
+            <div className="cp-slider-info" />
+          </div>
+          <div className="cp-brightness-scale" aria-hidden="true">
+            <span className="cp-brightness-scale-left">☀</span>
+            <span className="cp-brightness-scale-right">☀</span>
           </div>
           <div className="cp-track-wrap">
             <div className="cp-track-bg" />

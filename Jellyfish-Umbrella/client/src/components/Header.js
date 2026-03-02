@@ -6,7 +6,7 @@ export default function Header({ page, setPage }) {
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "center",
         padding: "18px 28px",
         borderBottom: "1px solid var(--border-subtle)",
         position: "relative",
@@ -16,11 +16,15 @@ export default function Header({ page, setPage }) {
       }}
     >
       <button
-        onClick={() => setPage("facts")}
+        onClick={() => setPage(page === "facts" ? "control" : "facts")}
         style={{
-          fontSize: 13,
-          color: page === "facts" ? "#fff" : "var(--text-dim)",
-          fontWeight: page === "facts" ? 600 : 400,
+          position: "absolute",
+          left: 28,
+          top: "50%",
+          transform: "translateY(-50%)",
+          fontSize: 18,
+          color: "var(--text-secondary)",
+          fontWeight: 600,
           letterSpacing: 0.3,
           border: "none",
           background: "none",
@@ -29,12 +33,12 @@ export default function Header({ page, setPage }) {
           transition: "color 0.2s",
         }}
       >
-        fun facts
+        {page === "facts" ? "control panel" : "fun facts"}
       </button>
 
       <span
         style={{
-          fontSize: 15,
+          fontSize: 32,
           fontWeight: 700,
           color: "#fff",
           letterSpacing: 0.5,
@@ -42,28 +46,6 @@ export default function Header({ page, setPage }) {
       >
         {page === "control" ? "control panel" : "fun facts"}
       </span>
-
-      <button
-        onClick={() => setPage("control")}
-        style={{
-          fontSize: 13,
-          color: page === "control" ? "var(--text-dim)" : "var(--text-secondary)",
-          fontWeight: page === "control" ? 600 : 400,
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          fontFamily: "var(--font-body)",
-          transition: "color 0.2s",
-        }}
-      >
-        {page === "facts" ? "control panel" : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-          </svg>
-        )}
-      </button>
     </header>
   );
 }

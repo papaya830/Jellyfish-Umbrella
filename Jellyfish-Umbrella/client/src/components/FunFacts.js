@@ -158,10 +158,10 @@ export default function FunFacts() {
             <div style={{ width: 8, height: 2, background: "rgba(160,60,210,0.5)", borderRadius: 1 }} />
             <span
               style={{
-                fontSize: 10,
+                fontSize: 14,
                 letterSpacing: 3,
                 textTransform: "uppercase",
-                color: "rgba(160,60,210,0.6)",
+                color: "rgba(205,160,255,0.9)",
                 fontFamily: "var(--font-mono)",
               }}
             >
@@ -172,7 +172,7 @@ export default function FunFacts() {
 
           <p
             style={{
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: 400,
               lineHeight: 1.65,
               color: "rgba(255,255,255,0.85)",
@@ -193,7 +193,7 @@ export default function FunFacts() {
             border: "1.5px solid rgba(160,60,210,0.35)",
             background: "rgba(160,60,210,0.08)",
             color: "rgba(255,255,255,0.85)",
-            fontSize: 13,
+            fontSize: 17,
             fontWeight: 600,
             fontFamily: "var(--font-body)",
             letterSpacing: 0.5,
@@ -218,14 +218,14 @@ export default function FunFacts() {
           }}
         >
           <span>next</span>
-          <span style={{ fontSize: 12, fontWeight: 400, opacity: 0.6 }}>fun fact</span>
+          <span style={{ fontSize: 16, fontWeight: 400, opacity: 0.6 }}>fun fact</span>
         </button>
 
         {/* Counter */}
         <div
           style={{
             marginTop: 24,
-            fontSize: 11,
+            fontSize: 15,
             color: "var(--text-dim)",
             fontFamily: "var(--font-mono)",
           }}
