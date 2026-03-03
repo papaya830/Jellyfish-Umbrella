@@ -1,0 +1,134 @@
+/* MovementModeControl.css — mm- scoped */
+
+.mm-root {
+  background: var(--cp-bg, #07090f);
+  color: var(--cp-text, #f2f7ff);
+  font-family: var(--cp-sans, "DM Sans", sans-serif);
+  padding: 0 18px 20px;
+  max-width: 980px;
+  margin: -8px auto 0;
+}
+
+.mm-card {
+  background: var(--cp-surface, #0d1322);
+  border: 1px solid var(--cp-border, rgba(120, 200, 255, 0.1));
+  border-radius: var(--cp-radius, 14px);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(79, 195, 247, 0.05) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.mm-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cp-text-dim, rgba(242, 247, 255, 0.7));
+  margin-bottom: 4px;
+}
+
+.mm-subtitle {
+  font-size: 18px;
+  color: var(--cp-text-dim, rgba(242, 247, 255, 0.7));
+  font-weight: 300;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.mm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .mm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mm-btn {
+  border-radius: 10px;
+  border: 1px solid var(--cp-border, rgba(120, 200, 255, 0.1));
+  background: var(--cp-surface2, #111826);
+  color: var(--cp-text-dim, rgba(242, 247, 255, 0.7));
+  padding: 8px 8px 9px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: inherit;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 16px;
+}
+
+.mm-btn:hover {
+  border-color: rgba(79, 195, 247, 0.4);
+  background: rgba(79, 195, 247, 0.08);
+  color: var(--cp-text, #f2f7ff);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(79, 195, 247, 0.18);
+}
+
+.mm-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.mm-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.mm-btn--active {
+  border-color: rgba(79, 195, 247, 0.7);
+  background: rgba(79, 195, 247, 0.16);
+  color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.4),
+    0 8px 32px rgba(79, 195, 247, 0.22);
+}
+
+.mm-btn--accent {
+  border-color: rgba(129, 199, 132, 0.5);
+}
+
+.mm-btn--danger {
+  border-color: rgba(239, 83, 80, 0.5);
+}
+
+.mm-label {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mm-desc {
+  font-size: 14px;
+  color: var(--cp-text-hint, rgba(242, 247, 255, 0.5));
+}
+
+.mm-status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--cp-text-hint, rgba(242, 247, 255, 0.5));
+}
+
+.mm-state {
+  font-family: var(--cp-mono, "DM Mono", monospace);
+  font-size: 13px;
+  color: rgba(187, 222, 251, 0.9);
+}
+

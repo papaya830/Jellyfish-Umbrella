@@ -152,16 +152,90 @@
   overflow: hidden; display: flex; align-items: center; justify-content: center;
   position: relative; margin-top: 4px;
 }
-.cp-jelly-body { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
+.cp-jelly-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .cp-jelly-bell { width: 60px; height: 43px; border-radius: 50% 50% 20% 20%; position: relative; overflow: hidden; }
 .cp-jelly-bell::after { content: ''; position: absolute; bottom: 0; left: 10%; width: 80%; height: 40%; background: rgba(255,255,255,.08); border-radius: 50%; }
-.cp-jelly-tentacles { display: flex; gap: 4px; margin-top: 2px; }
-.cp-tentacle { width: 4px; border-radius: 2px; overflow: hidden; position: relative; }
+.cp-jelly-tentacles {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+.cp-tentacle {
+  width: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* tip segment used for movement preview */
+.cp-tentacle::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 25%;
+  border-radius: 2px;
+  background: inherit;
+  transform-origin: top center;
+  transform: rotate(0deg);
+  transition: transform .18s ease-out;
+}
 .cp-jelly-glow { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .cp-glow-ball  { width: 180px; height: 180px; border-radius: 50%; filter: blur(50px); }
 .cp-pattern-card-full { grid-column: 1 / -1; }
 .cp-preview-label { font-size: 16px; color: var(--cp-text-hint); text-align: center; margin-top: 6px; min-height: 20px; transition: color .25s; }
 .cp-preview-label.hovering { color: var(--cp-accent); }
+
+/* preview — tentacle movement states (tip motion only via curved segment) */
+/* In: bottom quarter curves toward the center of the bell (~50°+) */
+.cp-jelly-preview--in .cp-tentacle--i0::after { transform: rotate(55deg); }
+.cp-jelly-preview--in .cp-tentacle--i1::after { transform: rotate(48deg); }
+.cp-jelly-preview--in .cp-tentacle--i2::after { transform: rotate(38deg); }
+.cp-jelly-preview--in .cp-tentacle--i3::after { transform: rotate(26deg); }
+.cp-jelly-preview--in .cp-tentacle--i4::after { transform: rotate(-26deg); }
+.cp-jelly-preview--in .cp-tentacle--i5::after { transform: rotate(-38deg); }
+.cp-jelly-preview--in .cp-tentacle--i6::after { transform: rotate(-48deg); }
+.cp-jelly-preview--in .cp-tentacle--i7::after { transform: rotate(-55deg); }
+
+/* Out: inverse — curve tips away from the center line */
+.cp-jelly-preview--out .cp-tentacle--i0::after { transform: rotate(-55deg); }
+.cp-jelly-preview--out .cp-tentacle--i1::after { transform: rotate(-48deg); }
+.cp-jelly-preview--out .cp-tentacle--i2::after { transform: rotate(-38deg); }
+.cp-jelly-preview--out .cp-tentacle--i3::after { transform: rotate(-26deg); }
+.cp-jelly-preview--out .cp-tentacle--i4::after { transform: rotate(26deg); }
+.cp-jelly-preview--out .cp-tentacle--i5::after { transform: rotate(38deg); }
+.cp-jelly-preview--out .cp-tentacle--i6::after { transform: rotate(48deg); }
+.cp-jelly-preview--out .cp-tentacle--i7::after { transform: rotate(55deg); }
+
+@keyframes cp-jelly-sway {
+  0%   { transform: translateY(0px) translateX(0px); }
+  25%  { transform: translateY(3px) translateX(-3px); }
+  50%  { transform: translateY(0px) translateX(3px); }
+  75%  { transform: translateY(-3px) translateX(-2px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+
+.cp-jelly-preview--continuous .cp-jelly-body {
+  animation: cp-jelly-sway 3.5s ease-in-out infinite;
+}
+
+.cp-jelly-preview--resting .cp-jelly-body,
+.cp-jelly-preview--stop .cp-jelly-body {
+  transform: none;
+  animation: none;
+}
+
+.cp-jelly-preview--resting .cp-tentacle::after,
+.cp-jelly-preview--stop .cp-tentacle::after {
+  transform: rotate(0deg);
+}
 
 /* ── send ── */
 .cp-send-section { margin-top: 12px; grid-column: 1 / -1; }

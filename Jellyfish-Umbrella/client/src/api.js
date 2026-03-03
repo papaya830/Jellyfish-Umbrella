@@ -20,7 +20,7 @@ export async function setColor({ hex, brightness, pattern }) {
 
 /**
  * Trigger tentacle movement.
- * @param {{ direction: 'left' | 'right' }} params
+ * @param {{ direction: 'left' | 'right' | 'neutral' }} params
  */
 export async function setMovement({ direction }) {
   const res = await fetch(`${BASE}/api/movement`, {

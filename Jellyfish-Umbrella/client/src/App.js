@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import Header from "./components/Header";
 import ControlPanel from "./components/ControlPanel";
-import TentacleControl from "./components/TentacleControl";
 import FunFacts from "./components/FunFacts";
 
 export default function App() {
-  const [page, setPage] = useState("control"); // "control" | "tentacles" | "facts"
+  const [page, setPage] = useState("control"); // "control" | "facts"
   const [activeColor, setActiveColor] = useState(null);
   const [tentacleState, setTentacleState] = useState("resting");
 
@@ -17,11 +16,6 @@ export default function App() {
         <ControlPanel
           activeColor={activeColor}
           setActiveColor={setActiveColor}
-          tentacleState={tentacleState}
-          setTentacleState={setTentacleState}
-        />
-      ) : page === "tentacles" ? (
-        <TentacleControl
           tentacleState={tentacleState}
           setTentacleState={setTentacleState}
         />

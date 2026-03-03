@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { setColor, generateAIColors } from '../api';
+import MovementModeControl from './MovementModeControl';
 import './ColorPicker.css';
 
 // ─────────────────────────────────────────────────
@@ -102,12 +103,13 @@ const PATTERNS = [
 ];
 
 const MINI_H = [7, 10, 13, 10, 7];
-const MAIN_H = [26, 36, 44, 38, 50, 54, 50, 38, 44, 36, 26];
+// 8 main tentacles for clearer movement preview
+const MAIN_H = [30, 40, 48, 40, 40, 48, 40, 30];
 
 // ─────────────────────────────────────────────────
 //  Component
 // ─────────────────────────────────────────────────
-export default function ColorPicker({ onColorSent } = {}) {
+export default function ColorPicker({ onColorSent, tentacleState = 'resting', setTentacleState } = {}) {
   // ── React state (triggers re-render) ────────────
   const [hue,     setHue]     = useState(200);
   const [sat,     setSat]     = useState(90);
@@ -738,18 +740,18 @@ export default function ColorPicker({ onColorSent } = {}) {
         <div className="cp-card">
           <div className="cp-card-title">Live Preview</div>
           <div className="cp-card-desc" style={{ marginBottom: 8 }}>See your colour and pattern before sending.</div>
-          <div className="cp-jelly-preview">
+          <div className={`cp-jelly-preview cp-jelly-preview--${tentacleState || 'resting'}`}>
             <div className="cp-jelly-glow">
               <div ref={glowBallRef} className="cp-glow-ball" />
             </div>
-            <div className="cp-jelly-body">
+              <div className="cp-jelly-body">
               <div ref={jellyBellRef} className="cp-jelly-bell" />
               <div className="cp-jelly-tentacles">
                 {MAIN_H.map((h, i) => (
                   <div
                     key={i}
                     ref={mainTRefs.current[i]}
-                    className="cp-tentacle"
+                    className={`cp-tentacle cp-tentacle--i${i}`}
                     style={{ height: h + 'px' }}
                   />
                 ))}
@@ -812,6 +814,12 @@ export default function ColorPicker({ onColorSent } = {}) {
             })}
           </div>
         </div>
+
+        {/* ── step 4 — movement modes ── */}
+        <MovementModeControl
+          tentacleState={tentacleState}
+          setTentacleState={setTentacleState}
+        />
 
         {/* ── send ── */}
         <div className="cp-send-section">
