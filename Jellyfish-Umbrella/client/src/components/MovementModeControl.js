@@ -39,8 +39,8 @@ export default function MovementModeControl({ tentacleState, setTentacleState })
   };
 
   const modeToPreviewState = (mode) => {
-    if (mode === "in") return "in";
-    if (mode === "out") return "out";
+    if (mode === "in") return "out";
+    if (mode === "out") return "in";
     if (mode === "continuous") return "continuous";
     return "resting";
   };
@@ -64,31 +64,29 @@ export default function MovementModeControl({ tentacleState, setTentacleState })
 
     if (mode === "in") {
       if (setTentacleState) setTentacleState("in");
-      await sendDirection("left");
+      await sendDirection("right");
       return;
     }
 
     if (mode === "out") {
       if (setTentacleState) setTentacleState("out");
-      await sendDirection("right");
+      await sendDirection("left");
       return;
     }
-
+    
     if (mode === "continuous") {
-      // Start alternating between left / right on a gentle timer.
-      // We also fire an immediate move so the mode feels responsive
+      // left = outward curl, right = inward curl
       const first = nextDirRef.current;
-      const firstState = first === "left" ? "in" : "out";
+      const firstState = first === "right" ? "in" : "out";
       if (setTentacleState) setTentacleState(firstState);
       await sendDirection(first);
       nextDirRef.current = first === "left" ? "right" : "left";
 
       intervalRef.current = setInterval(() => {
         const dir = nextDirRef.current;
-        const state = dir === "left" ? "in" : "out";
+        const state = dir === "right" ? "in" : "out";
         nextDirRef.current = dir === "left" ? "right" : "left";
         if (setTentacleState) setTentacleState(state);
-        // Fire-and-forget; errors are logged inside sendDirection.
         sendDirection(dir);
       }, CONTINUOUS_INTERVAL_MS);
     }
