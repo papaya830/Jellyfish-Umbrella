@@ -165,27 +165,29 @@
   display: flex;
   gap: 4px;
   margin-top: 2px;
+  overflow: visible;
 }
 .cp-tentacle {
   width: 4px;
   border-radius: 2px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
-/* tip segment used for movement preview */
+/* bottom third — flows as one curved column, rounded elbow into bend */
 .cp-tentacle::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: -15px;
   height: 33%;
-  border-radius: 2px;
+  min-height: 10px;
+  border-radius: 0% 0% 2px 2px;
   background: inherit;
   transform-origin: top center;
   transform: rotate(0deg);
-  transition: transform .18s ease-out;
+  transition: transform .3s ease-out;
 }
 .cp-jelly-glow { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .cp-glow-ball  { width: 180px; height: 180px; border-radius: 50%; filter: blur(50px); }
@@ -193,45 +195,56 @@
 .cp-preview-label { font-size: 16px; color: var(--cp-text-hint); text-align: center; margin-top: 6px; min-height: 20px; transition: color .25s; }
 .cp-preview-label.hovering { color: var(--cp-accent); }
 
-/* preview — tentacle movement states (tip motion only via curved segment) */
-/* In: bottom third bends inward at ~90° toward center line */
+/* preview — tentacle movement (one flowing column, 60° curve) */
+/* In: curve toward middle */
 .cp-jelly-preview--in .cp-tentacle--i0::after,
 .cp-jelly-preview--in .cp-tentacle--i1::after,
 .cp-jelly-preview--in .cp-tentacle--i2::after,
 .cp-jelly-preview--in .cp-tentacle--i3::after {
-  transform: rotate(90deg);
+  transform: rotate(60deg);
 }
 .cp-jelly-preview--in .cp-tentacle--i4::after,
 .cp-jelly-preview--in .cp-tentacle--i5::after,
 .cp-jelly-preview--in .cp-tentacle--i6::after,
 .cp-jelly-preview--in .cp-tentacle--i7::after {
-  transform: rotate(-90deg);
+  transform: rotate(-60deg);
 }
 
-/* Out: inverse — bend tips outward at ~90° away from center line */
+/* Out: curve toward walls */
 .cp-jelly-preview--out .cp-tentacle--i0::after,
 .cp-jelly-preview--out .cp-tentacle--i1::after,
 .cp-jelly-preview--out .cp-tentacle--i2::after,
 .cp-jelly-preview--out .cp-tentacle--i3::after {
-  transform: rotate(-90deg);
+  transform: rotate(-60deg);
 }
 .cp-jelly-preview--out .cp-tentacle--i4::after,
 .cp-jelly-preview--out .cp-tentacle--i5::after,
 .cp-jelly-preview--out .cp-tentacle--i6::after,
 .cp-jelly-preview--out .cp-tentacle--i7::after {
-  transform: rotate(90deg);
+  transform: rotate(60deg);
 }
 
-@keyframes cp-jelly-sway {
-  0%   { transform: translateY(0px) translateX(0px); }
-  25%  { transform: translateY(3px) translateX(-3px); }
-  50%  { transform: translateY(0px) translateX(3px); }
-  75%  { transform: translateY(-3px) translateX(-2px); }
-  100% { transform: translateY(0px) translateX(0px); }
+/* Continuous: alternate in and out */
+@keyframes cp-tip-in-out-left {
+  0%, 100% { transform: rotate(60deg); }
+  50%      { transform: rotate(-60deg); }
+}
+@keyframes cp-tip-in-out-right {
+  0%, 100% { transform: rotate(-60deg); }
+  50%      { transform: rotate(60deg); }
 }
 
-.cp-jelly-preview--continuous .cp-jelly-body {
-  animation: cp-jelly-sway 3.5s ease-in-out infinite;
+.cp-jelly-preview--continuous .cp-tentacle--i0::after,
+.cp-jelly-preview--continuous .cp-tentacle--i1::after,
+.cp-jelly-preview--continuous .cp-tentacle--i2::after,
+.cp-jelly-preview--continuous .cp-tentacle--i3::after {
+  animation: cp-tip-in-out-left 2.5s ease-in-out infinite;
+}
+.cp-jelly-preview--continuous .cp-tentacle--i4::after,
+.cp-jelly-preview--continuous .cp-tentacle--i5::after,
+.cp-jelly-preview--continuous .cp-tentacle--i6::after,
+.cp-jelly-preview--continuous .cp-tentacle--i7::after {
+  animation: cp-tip-in-out-right 2.5s ease-in-out infinite;
 }
 
 .cp-jelly-preview--resting .cp-jelly-body,
@@ -243,6 +256,7 @@
 .cp-jelly-preview--resting .cp-tentacle::after,
 .cp-jelly-preview--stop .cp-tentacle::after {
   transform: rotate(0deg);
+  animation: none;
 }
 
 /* ── send ── */
