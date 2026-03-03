@@ -180,7 +180,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 25%;
+  height: 33%;
   border-radius: 2px;
   background: inherit;
   transform-origin: top center;
@@ -194,25 +194,33 @@
 .cp-preview-label.hovering { color: var(--cp-accent); }
 
 /* preview — tentacle movement states (tip motion only via curved segment) */
-/* In: bottom quarter curves toward the center of the bell (~50°+) */
-.cp-jelly-preview--in .cp-tentacle--i0::after { transform: rotate(55deg); }
-.cp-jelly-preview--in .cp-tentacle--i1::after { transform: rotate(48deg); }
-.cp-jelly-preview--in .cp-tentacle--i2::after { transform: rotate(38deg); }
-.cp-jelly-preview--in .cp-tentacle--i3::after { transform: rotate(26deg); }
-.cp-jelly-preview--in .cp-tentacle--i4::after { transform: rotate(-26deg); }
-.cp-jelly-preview--in .cp-tentacle--i5::after { transform: rotate(-38deg); }
-.cp-jelly-preview--in .cp-tentacle--i6::after { transform: rotate(-48deg); }
-.cp-jelly-preview--in .cp-tentacle--i7::after { transform: rotate(-55deg); }
+/* In: bottom third bends inward at ~90° toward center line */
+.cp-jelly-preview--in .cp-tentacle--i0::after,
+.cp-jelly-preview--in .cp-tentacle--i1::after,
+.cp-jelly-preview--in .cp-tentacle--i2::after,
+.cp-jelly-preview--in .cp-tentacle--i3::after {
+  transform: rotate(90deg);
+}
+.cp-jelly-preview--in .cp-tentacle--i4::after,
+.cp-jelly-preview--in .cp-tentacle--i5::after,
+.cp-jelly-preview--in .cp-tentacle--i6::after,
+.cp-jelly-preview--in .cp-tentacle--i7::after {
+  transform: rotate(-90deg);
+}
 
-/* Out: inverse — curve tips away from the center line */
-.cp-jelly-preview--out .cp-tentacle--i0::after { transform: rotate(-55deg); }
-.cp-jelly-preview--out .cp-tentacle--i1::after { transform: rotate(-48deg); }
-.cp-jelly-preview--out .cp-tentacle--i2::after { transform: rotate(-38deg); }
-.cp-jelly-preview--out .cp-tentacle--i3::after { transform: rotate(-26deg); }
-.cp-jelly-preview--out .cp-tentacle--i4::after { transform: rotate(26deg); }
-.cp-jelly-preview--out .cp-tentacle--i5::after { transform: rotate(38deg); }
-.cp-jelly-preview--out .cp-tentacle--i6::after { transform: rotate(48deg); }
-.cp-jelly-preview--out .cp-tentacle--i7::after { transform: rotate(55deg); }
+/* Out: inverse — bend tips outward at ~90° away from center line */
+.cp-jelly-preview--out .cp-tentacle--i0::after,
+.cp-jelly-preview--out .cp-tentacle--i1::after,
+.cp-jelly-preview--out .cp-tentacle--i2::after,
+.cp-jelly-preview--out .cp-tentacle--i3::after {
+  transform: rotate(-90deg);
+}
+.cp-jelly-preview--out .cp-tentacle--i4::after,
+.cp-jelly-preview--out .cp-tentacle--i5::after,
+.cp-jelly-preview--out .cp-tentacle--i6::after,
+.cp-jelly-preview--out .cp-tentacle--i7::after {
+  transform: rotate(90deg);
+}
 
 @keyframes cp-jelly-sway {
   0%   { transform: translateY(0px) translateX(0px); }
