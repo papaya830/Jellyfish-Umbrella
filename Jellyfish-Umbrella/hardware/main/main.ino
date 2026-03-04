@@ -1,39 +1,15 @@
-/*
-  Jellyfish Umbrella — ESP32 Main Sketch
-  Handles:
-    - WiFi connection
-    - HTTP server for /led and /move endpoints
-    - 8x NeoPixel LED strips
-    - 2x Servo motors (tentacle movement)
-
-  LED Pins:  25, 26, 22, 23, 21, 19, 18, 5
-  Servo Pins: LEFT → 32 | RIGHT → 33
-              (avoid 25/26/22/23/21/19/18/5 — used by LEDs)
-
-  Left servo:  neutral = 65°  | curl = 245°
-  Right servo: neutral = 190° | curl = 11°
-
-  HTTP Endpoints:
-    POST /led   — body: { r, g, b, brightness, pattern }
-    POST /move  — body: { direction: "left"|"right"|"loop"|"stop" }
-    GET  /status
-*/
-
-#include <WiFi.h>
-#include <WebServer.h>
-#include <ArduinoJson.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <Adafruit_NeoPixel.h>
-#include <ESP32Servo.h>
+// strip.setPixelColor(i, color);
+// i: LED number
+// color: strip.Colour(R, G, B)
+// 24 bits is sent, 8 bits per colour, converts 0-255 to bits
 
 // ------------------------------------------------------------------------------------
-// WIFI CREDENTIALS — update before flashing
+// PIN & VALUE DEFINITIONS
 // ------------------------------------------------------------------------------------
-const char* WIFI_SSID = "YOUR_HOTSPOT_NAME";
-const char* WIFI_PASS = "YOUR_HOTSPOT_PASSWORD";
-
-// ------------------------------------------------------------------------------------
-// LED PIN & CONFIG
-// ------------------------------------------------------------------------------------
+// ESP32 pins connected to DATA IN
 #define STRIP_PIN_1 25
 #define STRIP_PIN_2 26
 #define STRIP_PIN_3 22
@@ -42,18 +18,35 @@ const char* WIFI_PASS = "YOUR_HOTSPOT_PASSWORD";
 #define STRIP_PIN_6 19
 #define STRIP_PIN_7 18
 #define STRIP_PIN_8 5
+// Number of LEDs per strip
 #define NUM_LEDS_PER_STRIP 20
-#define DEFAULT_BRIGHTNESS 160
+// Default brightness, 1 - 255 range
+#define BRIGHTNESS 160
 
-typedef struct { uint8_t r; uint8_t g; uint8_t b; } RGB_t;
+// RGB struct for holding each colours RGB values
+typedef struct {
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+} RGB_t;
 
+// Index definitions for below RBG_t array which contains hardcoded colours
 #define NO_COLOUR 0
+#define PINK_IDX 1
+#define BLUE_IDX 2
 RGB_t defaultColours[] = {
-  {0, 0, 0},       // NO_COLOUR
-  {255, 0, 120},   // Pink
-  {0, 180, 255}    // Blue
+  {0, 0, 0},
+  {255, 0, 120}, // Pink
+  {0, 180, 255} // Blue
 };
 
+// Global interrupt flag to exit twinkle loop if website instructions
+volatile bool stopTwinkle = false;
+
+// Variable for picking all strips
+#define ALL_STRIPS 0
+
+// LED stips object intialization
 Adafruit_NeoPixel strip1(NUM_LEDS_PER_STRIP, STRIP_PIN_1, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip2(NUM_LEDS_PER_STRIP, STRIP_PIN_2, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip3(NUM_LEDS_PER_STRIP, STRIP_PIN_3, NEO_GRB + NEO_KHZ800);
@@ -64,85 +57,110 @@ Adafruit_NeoPixel strip7(NUM_LEDS_PER_STRIP, STRIP_PIN_7, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip8(NUM_LEDS_PER_STRIP, STRIP_PIN_8, NEO_GRB + NEO_KHZ800);
 
 // ------------------------------------------------------------------------------------
-// SERVO PIN & CONFIG
+// SETUP & CONTROL LOOP
 // ------------------------------------------------------------------------------------
-#define LEFT_SERVO_PIN  32
-#define RIGHT_SERVO_PIN 33
+void setup() {
+  Serial.begin(9600);
+  stripsInit();
+}
 
-#define PULSE_MIN_US 500
-#define PULSE_MAX_US 2500
-
-#define LEFT_NEUTRAL  65.0
-#define LEFT_CURL     245.0
-#define RIGHT_NEUTRAL 190.0
-#define RIGHT_CURL    11.0
-
-Servo leftServo;
-Servo rightServo;
+void loop() {
+  pulse(ALL_STRIPS, defaultColours[PINK_IDX], BRIGHTNESS, 10);
+  Serial.println("Cycle done");
+  delay(500);
+}
 
 // ------------------------------------------------------------------------------------
-// STATE
-// ------------------------------------------------------------------------------------
-WebServer server(80);
-
-// LED state
-RGB_t currentColor = {0, 180, 255};  // default blue
-uint8_t currentBrightness = DEFAULT_BRIGHTNESS;
-String  currentPattern = "solid";
-
-// Servo/movement state
-enum MoveMode { IDLE, CURLING_LEFT, CURLING_RIGHT, LOOPING };
-MoveMode moveMode = IDLE;
-bool loopPhaseLeft = true;
-unsigned long lastSwitchMs = 0;
-const unsigned long LOOP_INTERVAL_MS = 1500;
-
-// ------------------------------------------------------------------------------------
-// LED HELPERS (from cosmos's code)
+// FUNCTION DEFINITIONS
 // ------------------------------------------------------------------------------------
 void stripsInit() {
-  strip1.begin(); strip1.show();
-  strip2.begin(); strip2.show();
-  strip3.begin(); strip3.show();
-  strip4.begin(); strip4.show();
-  strip5.begin(); strip5.show();
-  strip6.begin(); strip6.show();
-  strip7.begin(); strip7.show();
-  strip8.begin(); strip8.show();
+  strip1.begin();
+  strip1.show();
+  strip2.begin();
+  strip2.show();
+  strip3.begin();
+  strip3.show();
+  strip4.begin();
+  strip4.show();
+  strip5.begin();
+  strip5.show();
+  strip6.begin();
+  strip6.show();
+  strip7.begin();
+  strip7.show();
+  strip8.begin();
+  strip8.show();
 }
 
-void stripsUpdate() {
-  strip1.show(); strip2.show(); strip3.show(); strip4.show();
-  strip5.show(); strip6.show(); strip7.show(); strip8.show();
-}
-
+// Parameters: What strip to apply colour to, what LED on strip to apply colour
+// what RGB_t colour to put on strip
 void strips(uint8_t stripNum, uint8_t ledNum, RGB_t colour) {
-  uint32_t c1 = strip1.Color(colour.r, colour.g, colour.b);
-  uint32_t c2 = strip2.Color(colour.r, colour.g, colour.b);
-  uint32_t c3 = strip3.Color(colour.r, colour.g, colour.b);
-  uint32_t c4 = strip4.Color(colour.r, colour.g, colour.b);
-  uint32_t c5 = strip5.Color(colour.r, colour.g, colour.b);
-  uint32_t c6 = strip6.Color(colour.r, colour.g, colour.b);
-  uint32_t c7 = strip7.Color(colour.r, colour.g, colour.b);
-  uint32_t c8 = strip8.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert1 = strip1.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert2 = strip2.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert3 = strip3.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert4 = strip4.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert5 = strip5.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert6 = strip6.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert7 = strip7.Color(colour.r, colour.g, colour.b);
+  uint32_t colorConvert8 = strip8.Color(colour.r, colour.g, colour.b);
   switch (stripNum) {
     case 0:
-      strip1.setPixelColor(ledNum, c1); strip2.setPixelColor(ledNum, c2);
-      strip3.setPixelColor(ledNum, c3); strip4.setPixelColor(ledNum, c4);
-      strip5.setPixelColor(ledNum, c5); strip6.setPixelColor(ledNum, c6);
-      strip7.setPixelColor(ledNum, c7); strip8.setPixelColor(ledNum, c8);
-      break;
-    case 1: strip1.setPixelColor(ledNum, c1); break;
-    case 2: strip2.setPixelColor(ledNum, c2); break;
-    case 3: strip3.setPixelColor(ledNum, c3); break;
-    case 4: strip4.setPixelColor(ledNum, c4); break;
-    case 5: strip5.setPixelColor(ledNum, c5); break;
-    case 6: strip6.setPixelColor(ledNum, c6); break;
-    case 7: strip7.setPixelColor(ledNum, c7); break;
-    case 8: strip8.setPixelColor(ledNum, c8); break;
+      // All LEDs
+      strip1.setPixelColor(ledNum, colorConvert1);
+      strip2.setPixelColor(ledNum, colorConvert2);
+      strip3.setPixelColor(ledNum, colorConvert3);
+      strip4.setPixelColor(ledNum, colorConvert4);
+      strip5.setPixelColor(ledNum, colorConvert5);
+      strip6.setPixelColor(ledNum, colorConvert6);
+      strip7.setPixelColor(ledNum, colorConvert7);
+      strip8.setPixelColor(ledNum, colorConvert8);
+    case 1:
+      strip1.setPixelColor(ledNum, colorConvert1);
+    break;
+
+    case 2:
+      strip2.setPixelColor(ledNum, colorConvert2);
+    break;
+
+    case 3:
+      strip3.setPixelColor(ledNum, colorConvert3);
+    break;
+
+    case 4:
+      strip4.setPixelColor(ledNum, colorConvert4);
+    break;
+
+    case 5:
+      strip5.setPixelColor(ledNum, colorConvert5);
+    break;
+
+    case 6:
+      strip6.setPixelColor(ledNum, colorConvert6);
+    break;
+
+    case 7:
+      strip7.setPixelColor(ledNum, colorConvert7);
+    break;
+
+    case 8:
+      strip8.setPixelColor(ledNum, colorConvert8);
+    break;
   }
 }
 
+// Updates all strips after you send command
+void stripsUpdate() {
+  strip1.show();
+  strip2.show();
+  strip3.show();
+  strip4.show();
+  strip5.show();
+  strip6.show();
+  strip7.show();
+  strip8.show();
+}
+
+// Takes colour and a brightness value from 1-255 and outputs scaled colour brightness
 RGB_t brightnessAdjust(RGB_t colour, uint32_t brightVal) {
   colour.r = colour.r * brightVal / 255;
   colour.g = colour.g * brightVal / 255;
@@ -150,183 +168,138 @@ RGB_t brightnessAdjust(RGB_t colour, uint32_t brightVal) {
   return colour;
 }
 
-// Set all LEDs to a solid colour
-void setSolid(RGB_t colour, uint8_t brightness) {
-  RGB_t c = brightnessAdjust(colour, brightness);
-  for (int i = 0; i < NUM_LEDS_PER_STRIP; i++) {
-    strips(0, i, c);
-  }
-  stripsUpdate();
-}
+void twinkle(uint32_t stripNum, RGB_t colour, uint8_t brightness, uint32_t cycles, uint32_t milliDelay) {
+  // Outer for picking LEDs
+  uint32_t iterIdx = 0;
 
-// Non-blocking pulse — called from loop()
-void updatePulse() {
-  static int  pulseIdx = 0;
-  static unsigned long lastPulseMs = 0;
-  const unsigned long PULSE_DELAY = 10;
-
-  if (millis() - lastPulseMs < PULSE_DELAY) return;
-  lastPulseMs = millis();
-
-  RGB_t c = brightnessAdjust(currentColor, currentBrightness);
-  strips(0, pulseIdx, c);
-  if (pulseIdx > 0) strips(0, pulseIdx - 1, defaultColours[NO_COLOUR]);
-  stripsUpdate();
-
-  pulseIdx++;
-  if (pulseIdx >= NUM_LEDS_PER_STRIP) pulseIdx = 0;
-}
-
-// ------------------------------------------------------------------------------------
-// SERVO HELPERS
-// ------------------------------------------------------------------------------------
-int degToUs(float deg) {
-  if (deg < 0.0)   deg = 0.0;
-  if (deg > 270.0) deg = 270.0;
-  float t = deg / 270.0;
-  return (int)(PULSE_MIN_US + t * (PULSE_MAX_US - PULSE_MIN_US) + 0.5f);
-}
-
-void setLeft(float deg)  { leftServo.writeMicroseconds(degToUs(deg));  }
-void setRight(float deg) { rightServo.writeMicroseconds(degToUs(deg)); }
-
-void goNeutral()    { setLeft(LEFT_NEUTRAL);  setRight(RIGHT_NEUTRAL); }
-void goCurlLeft()   { setLeft(LEFT_CURL);     setRight(RIGHT_NEUTRAL); }
-void goCurlRight()  { setLeft(LEFT_NEUTRAL);  setRight(RIGHT_CURL);    }
-
-// ------------------------------------------------------------------------------------
-// HTTP HANDLERS
-// ------------------------------------------------------------------------------------
-void handleLED() {
-  if (!server.hasArg("plain")) {
-    server.send(400, "application/json", "{\"error\":\"no body\"}");
-    return;
-  }
-  StaticJsonDocument<256> doc;
-  DeserializationError err = deserializeJson(doc, server.arg("plain"));
-  if (err) {
-    server.send(400, "application/json", "{\"error\":\"invalid JSON\"}");
-    return;
-  }
-
-  currentColor.r   = doc["r"]          | currentColor.r;
-  currentColor.g   = doc["g"]          | currentColor.g;
-  currentColor.b   = doc["b"]          | currentColor.b;
-  currentBrightness = doc["brightness"] | currentBrightness;
-  currentPattern   = doc["pattern"]    | currentPattern;
-
-  Serial.printf("[LED] r=%d g=%d b=%d bri=%d pat=%s\n",
-    currentColor.r, currentColor.g, currentColor.b,
-    currentBrightness, currentPattern.c_str());
-
-  // Apply immediately for solid; other patterns update in loop()
-  if (currentPattern == "solid") {
-    setSolid(currentColor, currentBrightness);
-  }
-
-  server.send(200, "application/json", "{\"ok\":true}");
-}
-
-void handleMove() {
-  if (!server.hasArg("plain")) {
-    server.send(400, "application/json", "{\"error\":\"no body\"}");
-    return;
-  }
-  StaticJsonDocument<128> doc;
-  DeserializationError err = deserializeJson(doc, server.arg("plain"));
-  if (err) {
-    server.send(400, "application/json", "{\"error\":\"invalid JSON\"}");
-    return;
-  }
-
-  String dir = doc["direction"] | "stop";
-  Serial.printf("[MOVE] direction=%s\n", dir.c_str());
-
-  if (dir == "left") {
-    moveMode = CURLING_LEFT;
-    goCurlLeft();
-  } else if (dir == "right") {
-    moveMode = CURLING_RIGHT;
-    goCurlRight();
-  } else if (dir == "loop") {
-    moveMode = LOOPING;
-    loopPhaseLeft = true;
-    lastSwitchMs = millis();
-    goCurlLeft();
-  } else {
-    moveMode = IDLE;
-    goNeutral();
-  }
-
-  server.send(200, "application/json", "{\"ok\":true}");
-}
-
-void handleStatus() {
-  StaticJsonDocument<256> doc;
-  doc["r"]          = currentColor.r;
-  doc["g"]          = currentColor.g;
-  doc["b"]          = currentColor.b;
-  doc["brightness"] = currentBrightness;
-  doc["pattern"]    = currentPattern;
-  doc["movement"]   = (moveMode == CURLING_LEFT)  ? "left"  :
-                      (moveMode == CURLING_RIGHT) ? "right" :
-                      (moveMode == LOOPING)       ? "loop"  : "stop";
-  String out;
-  serializeJson(doc, out);
-  server.send(200, "application/json", out);
-}
-
-// ------------------------------------------------------------------------------------
-// SETUP
-// ------------------------------------------------------------------------------------
-void setup() {
-  Serial.begin(115200);
-
-  // LEDs
-  stripsInit();
-  setSolid(currentColor, currentBrightness);
-
-  // Servos
-  leftServo.attach(LEFT_SERVO_PIN,   PULSE_MIN_US, PULSE_MAX_US);
-  rightServo.attach(RIGHT_SERVO_PIN, PULSE_MIN_US, PULSE_MAX_US);
-  goNeutral();
-
-  // WiFi
-  Serial.printf("Connecting to %s", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println();
-  Serial.print("Connected! IP: ");
-  Serial.println(WiFi.localIP());   // <-- copy this into your .env as ESP32_IP
-
-  // HTTP routes
-  server.on("/led",    HTTP_POST, handleLED);
-  server.on("/move",   HTTP_POST, handleMove);
-  server.on("/status", HTTP_GET,  handleStatus);
-  server.begin();
-  Serial.println("HTTP server started");
-}
-
-// ------------------------------------------------------------------------------------
-// LOOP
-// ------------------------------------------------------------------------------------
-void loop() {
-  server.handleClient();
-
-  // Non-blocking pattern updates
-  if (currentPattern == "pulse") {
-    updatePulse();
-  }
-
-  // Non-blocking servo loop
-  if (moveMode == LOOPING) {
-    if (millis() - lastSwitchMs >= LOOP_INTERVAL_MS) {
-      lastSwitchMs = millis();
-      loopPhaseLeft = !loopPhaseLeft;
-      loopPhaseLeft ? goCurlLeft() : goCurlRight();
+  uint8_t ranLedNumArr[3];
+  uint8_t ranLedNumArrSize = 3;
+  uint8_t ranLedNumArrIdx = 0;
+  // Twinkles 'cycles' of times, keeps going indefinitely if 'cycles' is set 0 until
+  // global flag is raised
+  while (!stopTwinkle && (!cycles || cycles > iterIdx)) {
+    // Generate random LED number(s)
+    for (int i = 0; i < ranLedNumArrSize; i++) {
+      bool isBad = true;
+      // Loop until good
+      while (isBad) {
+        // Generate random number from 1 to NUM_LEDS_PER_STRIP
+        ledRanStartsArr[i] = esp_random() % NUM_LEDS_PER_STRIP + 1;
+        // Checks if LED num is num we want
+        for (int j = 0; j < ranLedNumArrSize; j++) {
+          if ((ranLedNumArr[i] >= ranLedNumArr[j] - 2)
+              && (ranLedNumArr[i] <= ranLedNumArr[j] + 2)) {
+            isBad = true;
+            break;
+          } else {
+            isBad = false;
+          }
+        }
+      }
     }
+
+    // Increase and then decrease brightness with random delays for 3 LEDs per sequence
+    // Brightness value increases every 1ms
+    uint8_t brightnessIncreaseRate = 1;
+    // Array to store brightness vals for each LED during increase and decrease
+    uint32_t ledBrightnessArr[3];
+    uint8_t ledBrightnessArrSize = 3;
+    // Fill array with zeros
+    for (int i = 0; i < ledBrightnessArrSize; i++) {
+      ledBrightnessArr[i] = 0;
+    }
+    // Array to store the 2nd and 3rd random LED starts
+    // LED starts are in brightness
+    uint32_t ledRanStartsArr[ledBrightnessArrSize - 1];
+    uint8_t ledRanStartIdx = 0;
+    // Get random LED start and check if values is good
+    // Only random start for second and third LED
+    for (int i = 0; i < ledBrightnessArrSize - 1; i++) {
+        bool isBad = true;
+        // Loop until good
+        while (isBad) {
+          // Generate random number from 1 to brightness
+          ledRanStartsArr[i] = esp_random() % brightness + 1;
+          // Check first random start is good
+          if (i == 0 && (ledRanStartsArr[i] <= brightness/2
+          || ledRanStartsArr[i] >= brightness*2)) {
+            isBad = true;
+            break;
+          } else if (i == 0) {
+            isBad = false;
+          }
+          // Check second random start is good
+          if ((ledRanStartsArr[i] >= (ledRanStartsArr[i - 1] + brightness/2))
+            && (ledRanStartsArr[ranLedNumArrIdx] <= ledRanStartsArr[i - 1] + brightness*2)) {
+            isBad = true;
+            break;
+          } else {
+            // Make second random start dependent on first
+            ledRanStartsArr[i] += ledRanStartsArr[i - 1];
+            isBad = false;
+          }
+        }
+    }
+
+    // Iterates through brightness changes in all 3 LEDs
+    // * 2 in condition for increasing AND decreasing brightness periods
+    for (int i = 1; i < ledRanStartsArr[1] + brightness; i += 10) {
+      // Increment brightnesses
+      for (int j = 0; j < ledBrightnessArrSize; j++) {
+        ledBrightnessArr[j] += i;
+      }
+
+      // First LED
+      // Increasing brightness
+      if (ledBrightnessArr[0] <= brightness) {
+        RGB_t colourBrighntnessChangeLed1 = brightnessAdjust(colour, ledBrightnessArr[0]);  
+        strips(stripNum, ranLedNumArr[0], colourBrighntnessChangeLed1);
+      // Decreasing brightness
+      } else if (ledBrightnessArr[0] > brightness && ledBrightnessArr[0] <= brightness*2) {
+        RGB_t colourBrighntnessChangeLed1 = brightnessAdjust(colour, (brightness - ledBrightnessArr[0] % brightness));  
+        strips(stripNum, ranLedNumArr[0], colourBrighntnessChangeLed1);
+      // Past its period
+      } else (ledBrightnessArr[0] > brightness*2) {
+        strips(stripNum, ranLedNumArr[0], defaultColour[NO_COLOUR]);
+      }
+
+      // Second LED
+      // Increasing brightness
+      if (ledBrightnessArr[0] <= brightness) {
+        RGB_t colourBrighntnessChangeLed1 = brightnessAdjust(colour, ledBrightnessArr[0]);  
+        strips(stripNum, ranLedNumArr[0], colourBrighntnessChangeLed1);
+      // Decreasing brightness
+      } else if (ledBrightnessArr[0] > brightness && ledBrightnessArr[0] <= brightness*2) {
+        RGB_t colourBrighntnessChangeLed1 = brightnessAdjust(colour, (brightness - ledBrightnessArr[0] % brightness));  
+        strips(stripNum, ranLedNumArr[0], colourBrighntnessChangeLed1);
+      // Past its period
+      } else (ledBrightnessArr[0] > brightness*2) {
+        strips(stripNum, ranLedNumArr[0], defaultColour[NO_COLOUR]);
+      }
+
+      delay(brightnessIncreaseRate);
+    }
+  }
+  // Wraps automatically if none-stop cycles
+  iterIdx++;
+}
+
+// Creates pulse
+// milliDelay is how fast LED travels across strip
+void pulse(uint8_t stripNum, RGB_t colour, uint8_t brightness, uint32_t milliDelay) {
+  // Adjust colour brightness
+  RGB_t colourAdjustedBrightness = brightnessAdjust(colour, brightness);
+  // Seqentially goes through each LED and turns it on and then off
+  for (int i = 1; i < NUM_LEDS_PER_STRIP + 1; i++) {
+    // Turns an LED in strip on
+    strips(stripNum, i, colourAdjustedBrightness);
+    // Edge case when you are at first strip and cant turn LED 0 off
+    if (i != 1) {
+      // Turns LED before it off
+      strips(stripNum, i - 1, defaultColours[NO_COLOUR]);
+    }
+    stripsUpdate();
+    // Delay between LED iterations
+    delay(milliDelay);
   }
 }
