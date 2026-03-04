@@ -11,8 +11,10 @@ const ESP32_BASE = `http://${process.env.ESP32_IP || "192.168.1.100"}`;
 
 async function sendToESP32(endpoint, data) {
   const url = `${ESP32_BASE}${endpoint}`;
-
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch(url, {
       method: "POST",
       headers: { 
@@ -20,11 +22,11 @@ async function sendToESP32(endpoint, data) {
         "Connection": "close"
       },
       body: JSON.stringify(data),
+      signal: controller.signal
     });
-    if (!response.ok) {
-      throw new Error(`ESP32 responded with ${response.status}`);
-    }
+    clearTimeout(timeout);
 
+    if (!response.ok) throw new Error(`ESP32 responded with ${response.status}`);
     const text = await response.text();
     console.log(`[ESP32] ${endpoint} →`, data, `| Response: ${text}`);
     return { success: true };
@@ -50,4 +52,4 @@ async function setMovement(direction) {
   return sendToESP32("/move", { direction });
 }
 
-module.exports = { setLEDColor, setMovement };
+module.exports = { setLEDColor, setMovement, sendToESP32 };

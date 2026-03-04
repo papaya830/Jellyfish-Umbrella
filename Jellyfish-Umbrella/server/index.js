@@ -24,10 +24,11 @@ app.locals.state = {
 app.locals.resetTimer = null;
 
 // ─── Routes ───
-app.use("/api", colorRoutes);
-app.use("/api", movementRoutes);
-app.use("/api", aiColorRoutes);
-app.use("/api", statusRoutes);
+// ─── Routes ───
+app.use("/api/color",    colorRoutes);
+app.use("/api/movement", movementRoutes);
+app.use("/api/ai-color", aiColorRoutes);
+app.use("/api/status",   statusRoutes);
 
 // ─── Health Check ───
 app.get("/", (req, res) => {
