@@ -35,10 +35,6 @@ cd server
 cp .env.example .env
 ```
 
-Edit `server/.env`:
-- `GEMINI_API_KEY` — Get from https://aistudio.google.com/app/apikey
-- `ESP32_IP` — Your ESP32's local IP address (e.g. `192.168.1.100`)
-
 ### 3. Run the app
 
 ```bash
